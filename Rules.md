@@ -1,3 +1,0 @@
-- comment theo đoạn lệnh quan trọng
-- Commnent theo hàm với chuẩn cấu trúc
-- Đặt tên hàm, biến theo style...
