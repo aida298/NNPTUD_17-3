@@ -1,7 +1,13 @@
+const { json } = require('body-parser')
 const express = require('express')
+const { title } = require('process')
+let slugify = require('slugify')
+
 const app = express()
 const port = 3000
-let fs = require('fs')
+app.use(json())
+
+// GET GET/ID POST PUT DELETE
 let dataProducts = [
     {
         "id": 99,
@@ -168,12 +174,17 @@ let dataCategories = [
 ]
 
 app.get('/products', (req, res) => {
+    let result = dataProducts.filter(
+        function (e) {
+            return !e.isDeleted
+        }
+    )
     res.send(dataProducts)
 })
 app.get('/products/:id', (req, res) => {//req.params
     let result = dataProducts.filter(
         function (e) {
-            return e.id == req.params.id;
+            return e.id == req.params.id && !e.isDeleted;
         }
     )
     res.send(result)
@@ -201,12 +212,86 @@ app.get('/categories/:id/products', (req, res) => {//req.params
     } else {
         let result = dataProducts.filter(
             function (e) {
-                return e.category.id==idCate;
+                return e.category.id == idCate;
             }
         )
         res.send(result)
     }
 })
+
+app.post('/products', (req, res) => {
+    let newProducts = {
+        id: GenID(dataProducts),
+        title: req.body.title,
+        slug: slugify(req.body.title, {
+            replacement: '-',
+            lower: false,
+            remove: undefined,
+        }),
+        description: req.body.description,
+        category: GetCateByID(req.body.category),
+        images: req.body.images,
+        creationAt: new Date(Date.now()),
+        updatedAt: new Date(Date.now())
+    }
+    dataProducts.push(newProducts);
+    res.send(newProducts)
+})
+app.put('/products/:id', (req, res) => {
+    let getProduct = dataProducts.filter(
+        function (e) {
+            return e.id == req.params.id && !e.isDeleted
+        }
+    )
+    if (getProduct.length > 0) {
+        getProduct = getProduct[0];
+        let keys = Object.keys(req.body);
+        for (const key of keys) {
+            if (getProduct[key]) {
+                getProduct[key] = req.body[key];
+            }
+        }
+        getProduct.updatedAt = new Date(Date.now());
+        res.status(200).send(getProduct)
+    } else {
+        res.status(404).send("id not found")
+    }
+
+})
+app.delete('/products/:id', (req, res) => {
+    let getProduct = dataProducts.filter(
+        function (e) {
+            return e.id == req.params.id && !e.isDeleted
+        }
+    )
+    if (getProduct.length > 0) {
+        getProduct = getProduct[0];
+        getProduct.isDeleted = true;
+        getProduct.updatedAt = new Date(Date.now());
+        res.status(200).send(getProduct)
+    } else {
+        res.status(404).send("id not found")
+    }
+
+})
+function GetCateByID(id) {
+    let result = dataCategories.filter(
+        function (e) {
+            return e.id == id
+        }
+    )
+    return result[0]
+}
+
+function GenID(data) {
+    let ids = data.map(
+        function (e) {
+            return e.id
+        }
+    )
+    return Math.max(...ids) + 1;
+}
+
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
